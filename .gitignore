@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.egg-info/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data files
+# We have a generator, so we don't need to commit the data itself.
+/data/*.csv
+
+# ML Models
+# We have a training script, so we don't commit the model artifacts.
+/app/ml/*.joblib
+
+# Streamlit
+.streamlit/
+
+# Docker
+docker-compose.override.yml
+
+# Mac
+.DS_Store
+
+# Tests
+.pytest_cache/
+htmlcov/
+.coverage

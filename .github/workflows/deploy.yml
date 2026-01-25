@@ -1,0 +1,104 @@
+# This is a GitHub Actions workflow file that defines the CI/CD pipeline.
+# It automates the process of building, testing, and deploying the application.
+
+name: Deploy Smart Vehicle Log Analyzer to Azure
+
+# --- Trigger ---
+# This workflow runs on any push event to the 'main' branch.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual triggering from the GitHub UI
+
+# --- Jobs ---
+# A workflow is made up of one or more jobs that can run sequentially or in parallel.
+jobs:
+  # --- Build and Test Job ---
+  # This job is responsible for quality assurance. It builds the code and runs tests.
+  build-and-test:
+    runs-on: ubuntu-latest # Use the latest Ubuntu runner
+    steps:
+      # Step 1: Check out the repository code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up Python environment
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Lint with flake8 (or ruff)
+      # This checks the code for style issues and potential errors.
+      - name: Lint with flake8
+        run: |
+          pip install flake8
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      # Step 5: Generate data and train model (required for the Docker build)
+      # In a real-world scenario, you might commit the model or pull it from a registry.
+      # For this self-contained project, we generate it on the fly.
+      - name: Generate Data and Train Model
+        run: |
+          python smart_vehicle_log_analyzer/notebooks/generate_dataset.py
+          python smart_vehicle_log_analyzer/notebooks/02_train_model.py
+
+      # Step 6: Build the Docker image
+      # This step confirms that the Dockerfile is valid and the application can be packaged.
+      - name: Build Docker image
+        run: docker build -t smart-vehicle-analyzer-backend:latest .
+
+  # --- Deploy Job ---
+  # This job deploys the application to Azure. It only runs if 'build-and-test' succeeds.
+  deploy:
+    needs: build-and-test # Dependency on the build-and-test job
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 1: Log in to Azure
+      # Uses the 'AZURE_CREDENTIALS' secret stored in the GitHub repository settings.
+      - name: Log in to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Step 2: Log in to Azure Container Registry (ACR)
+      - name: Log in to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      # Step 3: Generate data and train model again for this job's context
+      - name: Generate Data and Train Model
+        run: |
+          pip install -r requirements.txt
+          python smart_vehicle_log_analyzer/notebooks/generate_dataset.py
+          python smart_vehicle_log_analyzer/notebooks/02_train_model.py
+
+      # Step 4: Build and push the Docker image to ACR
+      - name: Build and push Docker image
+        run: |
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/smart-vehicle-analyzer-backend:${{ github.sha }} .
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/smart-vehicle-analyzer-backend:${{ github.sha }}
+
+      # Step 5: Deploy to Azure App Service
+      # This step tells the App Service to pull and run the new image from ACR.
+      - name: Deploy to App Service
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.AZURE_APP_NAME }} # Secret containing your App Service name
+          images: '${{ secrets.ACR_LOGIN_SERVER }}/smart-vehicle-analyzer-backend:${{ github.sha }}'

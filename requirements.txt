@@ -1,0 +1,18 @@
+# Backend
+fastapi
+uvicorn[standard]
+python-multipart
+# ML
+scikit-learn
+pandas
+numpy
+# Frontend
+streamlit
+requests
+# Cloud & DevOps (for deployment scripts if needed)
+azure-storage-blob
+azure-identity
+# Linting & Testing
+pytest
+flake8
+ruff
