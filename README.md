@@ -1,9 +1,8 @@
 # 🚗 Smart Vehicle Log Analyzer
 
-## Problem Statement
-Modern vehicles are complex systems generating vast amounts of log data from hundreds of sensors. Manually analyzing this data to diagnose intermittent or complex faults is inefficient and often ineffective. This project, **Smart Vehicle Log Analyzer**, provides an end-to-end system to automate this process. It ingests vehicle log files, uses a machine learning model to detect hidden anomalies, and translates these anomalies into human-readable diagnostic reports, complete with severity levels.
+[![CI/CD Pipeline](https://github.com/akhilrachakonda/Smart-Vehicle-Log-Analyzer/actions/workflows/deploy.yml/badge.svg)](https://github.com/akhilrachakonda/Smart-Vehicle-Log-Analyzer/actions/workflows/deploy.yml)
 
-This system is designed as a student-friendly, production-quality application that demonstrates key concepts in automotive software, machine learning, and DevOps, inspired by professional automotive diagnostic systems like AUTOSAR's Diagnostic Event Manager (DEM).
+An end-to-end system that ingests vehicle log files, uses a machine learning model to detect hidden anomalies, and translates these anomalies into human-readable diagnostic reports.
 
 ---
 
@@ -12,22 +11,60 @@ This system is designed as a student-friendly, production-quality application th
 
 ---
 
-## System Flow
-The data flows through the system in a clear, orchestrated sequence:
+## Technologies Used
+| Backend | Frontend | Machine Learning | DevOps |
+| :---: | :---: | :---: | :---: |
+| <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" /> | <img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" /> | <img src="https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white" /> | <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" /> |
+| <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" /> | | <img src="https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white" /> | <img src="https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" /> |
+| | | <img src="https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white" /> | <img src="https://img.shields.io/badge/Azure-0078D4?style=for-the-badge&logo=microsoft-azure&logoColor=white" /> |
 
-1.  **Upload:** A user uploads a `.csv` vehicle log file via the Streamlit web UI.
-2.  **Ingestion:** The frontend sends the file to the FastAPI backend's `/analyze` endpoint.
-3.  **Preprocessing:** The backend receives the file and uses a dedicated service to load, clean, and validate the data, handling missing values and ensuring correct formatting.
-4.  **Inference:** The clean, scaled data is fed into the pre-trained Isolation Forest model, which flags each row as either normal (`1`) or an anomaly (`-1`).
-5.  **Interpretation:** For each flagged anomaly, a rule-based "expert system" analyzes the corresponding sensor values to determine the fault's nature and assign a severity level (HIGH, MEDIUM, LOW).
-6.  **Reporting:** The backend compiles the results into a structured JSON `AnalysisReport`.
-7.  **Presentation:** The frontend receives the report and displays the detected anomalies and their explanations in a user-friendly dashboard.
 
 ---
 
-## Architecture Diagram (ASCII)
-This diagram shows the high-level architecture of the system, which is composed of a frontend, a backend, and a CI/CD pipeline for deployment.
+## System Flow
+1.  **Upload:** A user uploads a `.csv` vehicle log file via the Streamlit web UI.
+2.  **Ingestion:** The frontend sends the file to the FastAPI backend's `/analyze` endpoint.
+3.  **Preprocessing:** The backend receives the file and uses a dedicated service to load, clean, and validate the data.
+4.  **Inference:** The clean, scaled data is fed into the pre-trained Isolation Forest model, which flags each row as either normal (`1`) or an anomaly (`-1`).
+5.  **Interpretation:** For each flagged anomaly, a rule-based "expert system" analyzes the corresponding sensor values to determine the fault's nature and assign a severity level.
+6.  **Reporting:** The backend compiles the results into a structured JSON `AnalysisReport`.
+7.  **Presentation:** The frontend receives the report and displays the detected anomalies in a user-friendly dashboard.
 
+---
+
+## How to Run Locally with Docker Compose
+This is the recommended method. It simplifies the entire setup process into a single command.
+
+**Prerequisites:**
+*   Docker and Docker Compose installed and running.
+*   Git installed.
+
+**Steps:**
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/akhilrachakonda/Smart-Vehicle-Log-Analyzer.git
+    cd Smart-Vehicle-Log-Analyzer
+    ```
+
+2.  **Build and Run the Application:**
+    This single command will:
+    - Build the Docker image.
+    - Run a container to generate the training data and train the ML model.
+    - Start the backend and frontend services.
+    ```bash
+    docker-compose up --build
+    ```
+
+3.  **Access the Application:**
+    *   **Frontend UI:** Open your browser to `http://localhost:8501`
+    *   **Backend API Docs:** Open your browser to `http://localhost:8000/docs`
+
+To stop the application, press `Ctrl+C` in the terminal where `docker-compose` is running, and then run `docker-compose down`.
+
+---
+
+## Architecture Diagram
 ```
 +-----------------------------+      +-------------------------------------------------+      +------------------------+
 |      User (Browser)         |      |              GitHub Repository                  |      |      Azure Cloud       |
@@ -53,55 +90,6 @@ This diagram shows the high-level architecture of the system, which is composed 
                                      | - Build Docker Image  |  |                       |
                                      +-----------------------+  +-----------------------+
 ```
-
----
-
-## How to Run Locally
-You can run this project locally using Docker for a consistent, one-step setup.
-
-**Prerequisites:**
-*   Docker installed and running.
-*   Git installed.
-
-**Steps:**
-
-1.  **Clone the repository:**
-    ```bash
-    git clone <repository-url>
-    cd smart-vehicle-log-analyzer
-    ```
-
-2.  **Generate Synthetic Data & Train the Model:**
-    Before building the Docker image, you need to run the data generation and training scripts locally to create the model artifacts that will be copied into the image.
-    ```bash
-    # Install dependencies locally for the scripts
-    pip install -r requirements.txt
-
-    # Run the scripts
-    python3 notebooks/generate_dataset.py
-    python3 notebooks/02_train_model.py
-    ```
-
-3.  **Build the Docker Image:**
-    This command builds the Docker image for the backend application as defined in the `Dockerfile`.
-    ```bash
-    docker build -t smart-vehicle-analyzer-backend .
-    ```
-
-4.  **Run the Backend Container:**
-    This command starts the backend server.
-    ```bash
-    docker run -p 8000:8000 smart-vehicle-analyzer-backend
-    ```
-    The backend API will now be available at `http://127.0.0.1:8000`. You can see the interactive API documentation at `http://127.0.0.1:8000/docs`.
-
-5.  **Run the Frontend Application:**
-    In a **new terminal window**, navigate to the project directory and run the Streamlit app.
-    ```bash
-    # Ensure you are in the project's root directory
-    streamlit run frontend/app.py
-    ```
-    The frontend will be available at `http://localhost:8501`. You can now open this address in your browser to use the application.
 
 ---
 
