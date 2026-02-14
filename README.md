@@ -6,6 +6,13 @@ An end-to-end system that ingests vehicle log files, uses a machine learning mod
 
 ---
 
+## What’s New
+- LLM-powered anomaly explanations (root cause, severity, recommended actions) via OpenAI.
+- Telematics pipeline: preprocess raw long-format sensor data and train an Isolation Forest tailored to telematics logs.
+- Frontend now surfaces root cause + recommended actions per anomaly.
+
+---
+
 ## Resume-Ready Project Description
 > Designed and implemented an end-to-end Smart Vehicle Log Analyzer, a cloud-native application that uses machine learning to diagnose faults in automotive sensor data. Engineered a full-stack system with a Python/FastAPI backend for analysis and a Streamlit frontend for user interaction. Deployed the application in a containerized environment using Docker and established a CI/CD pipeline with GitHub Actions for automated testing and deployment to Azure App Service. The system ingests log data, detects anomalies with an Isolation Forest model, and provides actionable, human-readable fault explanations, mirroring the functionality of an automotive ECU's diagnostic manager.
 
@@ -29,6 +36,12 @@ An end-to-end system that ingests vehicle log files, uses a machine learning mod
 5.  **Interpretation:** For each flagged anomaly, a rule-based "expert system" analyzes the corresponding sensor values to determine the fault's nature and assign a severity level.
 6.  **Reporting:** The backend compiles the results into a structured JSON `AnalysisReport`.
 7.  **Presentation:** The frontend receives the report and displays the detected anomalies in a user-friendly dashboard.
+
+---
+
+## Environment Variables
+- `OPENAI_API_KEY` (required for LLM explanations; if unset, a safe fallback message is returned).
+- Azure OpenAI (optional): set `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_KEY`, `AZURE_OPENAI_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION` and adjust the OpenAI client accordingly.
 
 ---
 
@@ -61,6 +74,13 @@ This is the recommended method. It simplifies the entire setup process into a si
     *   **Backend API Docs:** Open your browser to `http://localhost:8000/docs`
 
 To stop the application, press `Ctrl+C` in the terminal where `docker-compose` is running, and then run `docker-compose down`.
+
+---
+
+## Telematics Workflow
+- **Preprocess raw telematics CSV:** `python notebooks/01_preprocess_telematics_data.py` (reads `data/Telematicsdata.csv`, writes `data/processed_telematics_data.csv`).
+- **Train telematics model:** `python notebooks/03_train_telematics_model.py` (produces `app/ml/telematics_anomaly_model.joblib` + scaler).
+- **Analyze telematics logs:** call `/analyze?model_name=telematics` with a telematics CSV; the backend uses the telematics features from `app/core/config.py`.
 
 ---
 
