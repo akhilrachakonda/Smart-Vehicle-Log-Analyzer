@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Tuple
 
 # Import the centralized configuration
-from app.core.config import MODEL_PATH, SCALER_PATH, FEATURES
+from app.core.config import MODEL_PATH, SCALER_PATH, FEATURES, MODEL_CONFIGS, ML_DIR
 
 # --- Model Loading ---
 # This section handles loading the pre-trained model and scaler from the disk.
@@ -48,7 +48,7 @@ def get_model_artifacts():
 # --- Prediction Function ---
 def predict_anomalies(df: pd.DataFrame) -> np.ndarray:
     """
-    Performs anomaly detection on the given dataframe.
+    Performs anomaly detection on the given dataframe using the default model.
 
     Args:
         df (pd.DataFrame): The input data, which must contain the columns defined in FEATURES.
@@ -74,6 +74,41 @@ def predict_anomalies(df: pd.DataFrame) -> np.ndarray:
 
     # 4. Make predictions
     # The model returns -1 for anomalies and 1 for normal data points.
+    predictions = model_instance.predict(X_scaled)
+
+    return predictions
+
+def predict_anomalies_for_model(df: pd.DataFrame, model_name: str) -> np.ndarray:
+    """
+    Performs anomaly detection using a dynamically specified model.
+
+    Args:
+        df (pd.DataFrame): The input data.
+        model_name (str): The name of the model config to use (e.g., 'telematics').
+
+    Returns:
+        np.ndarray: An array of predictions. '-1' indicates an anomaly, '1' indicates normal.
+    """
+    if model_name not in MODEL_CONFIGS:
+        raise ValueError(f"Model configuration '{model_name}' not found.")
+
+    config = MODEL_CONFIGS[model_name]
+    model_path = ML_DIR / config["model_name"]
+    scaler_path = ML_DIR / config["scaler_name"]
+    features = config["features"]
+
+    try:
+        model_instance = joblib.load(model_path)
+        scaler_instance = joblib.load(scaler_path)
+    except FileNotFoundError as e:
+        raise RuntimeError(f"Could not load model/scaler for '{model_name}'. Have you trained it? Details: {e}")
+
+    if not all(feature in df.columns for feature in features):
+        missing = [f for f in features if f not in df.columns]
+        raise ValueError(f"Input data for model '{model_name}' is missing features: {missing}")
+
+    X = df[features]
+    X_scaled = scaler_instance.transform(X)
     predictions = model_instance.predict(X_scaled)
 
     return predictions

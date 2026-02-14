@@ -31,6 +31,9 @@ docker-compose.override.yml
 # Mac
 .DS_Store
 
+# Notebooks
+.ipynb_checkpoints/
+
 # Tests
 .pytest_cache/
 htmlcov/

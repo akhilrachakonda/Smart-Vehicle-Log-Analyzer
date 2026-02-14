@@ -9,6 +9,7 @@ numpy
 # Frontend
 streamlit
 requests
+openai
 # Cloud & DevOps (for deployment scripts if needed)
 azure-storage-blob
 azure-identity

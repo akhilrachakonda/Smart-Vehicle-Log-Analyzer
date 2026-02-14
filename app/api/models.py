@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import List, Dict, Any
+from pydantic import BaseModel, Field
+from typing import List, Dict, Any, Optional
 
 # --- Anomaly Data Model ---
 # This model defines the structure for a single detected anomaly.
@@ -11,6 +11,8 @@ class Anomaly(BaseModel):
     severity: str
     explanation: str
     contributing_signals: Dict[str, Any]
+    root_cause: Optional[str] = None
+    recommended_actions: List[str] = Field(default_factory=list)
 
 # --- Analysis Report Model ---
 # This is the main response model for the /analyze endpoint.

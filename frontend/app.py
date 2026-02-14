@@ -11,9 +11,6 @@ st.set_page_config(
 )
 
 # --- Backend API Configuration ---
-# This is the address of our FastAPI backend.
-# When running locally with Docker Compose, 'backend' is the service name.
-# If running locally without Docker, you might use 'localhost' or '127.0.0.1'.
 BACKEND_URL = "http://127.0.0.1:8000/api/v1/analyze/"
 
 # --- UI Components ---
@@ -23,25 +20,34 @@ Welcome! This tool uses a machine learning model to analyze vehicle log data,
 detect anomalies, and provide human-readable explanations for potential faults.
 
 **How to use:**
-1.  **Upload** a vehicle log file in CSV format.
-2.  The system will **analyze** the data using the backend API.
-3.  **Review** the generated anomaly report below.
+1.  **Select the model** appropriate for your data type.
+2.  **Upload** a vehicle log file in CSV format.
+3.  The system will **analyze** the data.
+4.  **Review** the generated anomaly report below.
 """)
 
+# --- Model Selection ---
+model_choice = st.selectbox(
+    "1. Select the Analysis Model",
+    ("synthetic", "telematics"),
+    help="Choose 'synthetic' for generated data, or 'telematics' for raw, long-format telematics data."
+)
+
 # --- File Uploader ---
-uploaded_file = st.file_uploader("Choose a vehicle log file (.csv)", type="csv")
+uploaded_file = st.file_uploader("2. Choose a vehicle log file (.csv)", type="csv")
 
 if uploaded_file is not None:
-    st.info(f"File uploaded: `{uploaded_file.name}`. Analyzing, please wait...")
+    st.info(f"File uploaded: `{uploaded_file.name}`. Analyzing with '{model_choice}' model, please wait...")
 
     # --- API Request ---
     with st.spinner("Sending data to the analysis engine..."):
         try:
-            # Create a dictionary for the multipart/form-data payload
             files = {'file': (uploaded_file.name, uploaded_file.getvalue(), 'text/csv')}
             
-            # Make the POST request to the backend
-            response = requests.post(BACKEND_URL, files=files, timeout=120) # 120-second timeout
+            # Append the selected model name as a query parameter
+            analysis_url = f"{BACKEND_URL}?model_name={model_choice}"
+            
+            response = requests.post(analysis_url, files=files, timeout=120)
 
             # --- Response Handling ---
             if response.status_code == 200:
@@ -57,34 +63,36 @@ if uploaded_file is not None:
 
                 st.subheader("Detected Anomalies")
                 if not report['anomalies']:
-                    st.write("✅ No anomalies were detected in this log file. The vehicle appears to be operating normally.")
+                    st.write("✅ No anomalies were detected in this log file.")
                 else:
-                    # Display each anomaly in an expander
                     for i, anomaly in enumerate(report['anomalies']):
                         severity = anomaly['severity']
-                        color = "red" if severity == "HIGH" else "orange" if severity == "MEDIUM" else "blue"
+                        severity_normalized = severity.upper()
+                        color = "red" if severity_normalized == "HIGH" else "orange" if severity_normalized == "MEDIUM" else "blue"
                         
-                        with st.expander(f"🚨 **{severity} Anomaly** at `{anomaly['timestamp']}`", expanded=i < 3):
-                            st.markdown(f"**Explanation:**")
-                            st.warning(f"{anomaly['explanation']}")
+                        with st.expander(f"🚨 **{severity_normalized} Anomaly** at `{anomaly['timestamp']}`", expanded=i < 3):
+                            root_cause = anomaly.get('root_cause') or anomaly.get('explanation')
+                            st.markdown("**Explanation:**")
+                            st.warning(f"{root_cause}")
+                            
+                            actions = anomaly.get('recommended_actions') or []
+                            if actions:
+                                st.markdown("**Recommended Actions:**")
+                                for action in actions:
+                                    st.write(f"- {action}")
                             
                             st.markdown("**Contributing Signal Values:**")
-                            # Create a dataframe for the signals for better formatting
                             signals_df = pd.DataFrame([anomaly['contributing_signals']])
                             st.dataframe(signals_df)
 
             else:
-                # Handle API errors (e.g., 400, 500)
-                st.error(f"Analysis failed. The server returned an error (Code: {response.status_code}).")
+                st.error(f"Analysis failed (Code: {response.status_code}).")
                 try:
-                    # Try to display the detailed error message from the API
-                    error_detail = response.json().get('detail', 'No additional details provided.')
+                    error_detail = response.json().get('detail', 'No details provided.')
                     st.error(f"Details: {error_detail}")
                 except requests.exceptions.JSONDecodeError:
-                    st.error("Could not decode the error response from the server.")
+                    st.error("Could not decode server error response.")
 
         except requests.exceptions.RequestException as e:
-            # Handle network errors (e.g., backend is not running)
-            st.error(f"Network error: Could not connect to the backend analysis service.")
-            st.error(f"Please ensure the backend is running at `{BACKEND_URL}`.")
+            st.error(f"Network error: Could not connect to the backend at `{BACKEND_URL}`.")
             st.error(f"Details: {e}")

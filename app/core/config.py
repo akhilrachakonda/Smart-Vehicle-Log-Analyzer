@@ -7,23 +7,44 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
 # --- ML Model Configuration ---
-# This section centralizes the configuration for the machine learning artifacts.
-# It's like a manifest that tells the application what files to use.
+# This section centralizes the configuration for multiple machine learning models.
+# It allows the application to be flexible and switch between different models.
 ML_DIR = PROJECT_ROOT / "app" / "ml"
-MODEL_NAME = "anomaly_model.joblib"
-SCALER_NAME = "scaler.joblib"
+
+MODEL_CONFIGS = {
+    "synthetic": {
+        "model_name": "anomaly_model.joblib",
+        "scaler_name": "scaler.joblib",
+        "features": [
+            'engine_temp', 
+            'vehicle_speed',
+            'battery_voltage',
+            'brake_pressure'
+        ]
+    },
+    "telematics": {
+        "model_name": "telematics_anomaly_model.joblib",
+        "scaler_name": "telematics_scaler.joblib",
+        "features": [
+            'air_intake_temperature',
+            'calculated_engine_load',
+            'control_module_voltage',
+            'engine_coolant_temperature',
+            'engine_rpm',
+            'intake_manifold_absolute_pressure',
+            'throttle_position',
+            'vehicle_speed'
+        ]
+    }
+}
+
+# Define the default model to be loaded on application startup
+DEFAULT_MODEL_NAME = "synthetic"
+
+# --- Legacy Path Definitions (for backward compatibility with existing inference script) ---
+# These paths point to the default model's artifacts.
+MODEL_NAME = MODEL_CONFIGS[DEFAULT_MODEL_NAME]["model_name"]
+SCALER_NAME = MODEL_CONFIGS[DEFAULT_MODEL_NAME]["scaler_name"]
 MODEL_PATH = ML_DIR / MODEL_NAME
 SCALER_PATH = ML_DIR / SCALER_NAME
-
-# --- Feature Configuration ---
-# Defines the list of signals (features) that the model was trained on.
-# This is CRITICAL for ensuring that the data fed to the model at inference time
-# has the exact same structure as the training data.
-# Automotive Analogy: This is like the ECU's CAN signal database (DBC file),
-# specifying which signals to read and in what order.
-FEATURES = [
-    'engine_temp', 
-    'vehicle_speed',
-    'battery_voltage',
-    'brake_pressure'
-]
+FEATURES = MODEL_CONFIGS[DEFAULT_MODEL_NAME]["features"]
